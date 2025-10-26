@@ -1,6 +1,4 @@
-<!-- netlify.toml -->
 [build]
-  command = "echo 'Build complete'"
   publish = "."
   functions = "netlify/functions"
 
@@ -8,7 +6,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-
-[dev]
-  command = "netlify dev"
-  port = 8888
