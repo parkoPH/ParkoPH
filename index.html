@@ -1,0 +1,158 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserve Parking - Manila Condo Parking</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container container-parker">
+        <nav class="user-nav">
+            <div class="user-nav-info">
+                <span id="userGreeting" class="user-greeting">Loading...</span>
+            </div>
+            <button id="logoutBtn" class="btn-logout">Logout</button>
+        </nav>
+
+        <header class="hero-header">
+            <h1 class="hero-title">Reserve Parking</h1>
+            <p class="hero-subtitle">Verified condo slots. Guaranteed guard entry. Pay via GCash / Cash.</p>
+        </header>
+
+        <main>
+            <!-- Section: Booking Request -->
+            <section id="bookingSection" class="card">
+                <h2 class="section-title">Request a Parking Slot</h2>
+                
+                <div class="form-group">
+                    <label for="condoSelect">Select Condo</label>
+                    <select id="condoSelect">
+                        <option value="prisma_residences">Prisma Residences, Pasig</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="parkerName">Your Name</label>
+                    <input type="text" id="parkerName" placeholder="e.g. Liezl Maigue" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="plateNumber">Plate Number (Required)</label>
+                    <input type="text" id="plateNumber" placeholder="e.g. ABC 1234" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="startTime">From (When you arrive)</label>
+                    <input type="datetime-local" id="startTime" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="endTime">Until (When you leave)</label>
+                    <input type="datetime-local" id="endTime" required>
+                </div>
+
+                <button id="searchButton" class="btn-primary">Search Available Slots</button>
+            </section>
+
+            <!-- Section: Available Slots -->
+            <section id="slotsSection" class="card hidden">
+                <h2 class="section-title">Available Parking Slots</h2>
+                <div id="slotsList" class="slots-grid">
+                    <!-- Slots will be rendered here -->
+                </div>
+            </section>
+
+            <!-- Section: Booking Details (after request submitted) -->
+            <section id="bookingDetailsSection" class="card hidden">
+                <h2 class="section-title">Your Booking Request</h2>
+                <div id="bookingDetails">
+                    <!-- Booking details and QR code will be rendered here -->
+                </div>
+            </section>
+
+            <!-- Legal Footer -->
+            <section class="card legal-footer">
+                <p class="legal-title">Legal Disclaimer</p>
+                <p class="legal-text">By booking you agree that parking slot owners are responsible for the physical condition of the parking space. This platform only matches parkers and slot owners. Coordinate any damage claims directly with the slot owner or condo admin. Payments are handled directly via cash / GCash.</p>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthAndRole('parker');
+            initializeParkerPage();
+        });
+
+        function initializeParkerPage() {
+            const userName = sessionStorage.getItem('userName');
+            document.getElementById('userGreeting').textContent = `Logged in as ${userName} (Parker)`;
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('searchButton').addEventListener('click', handleSearchSlots);
+        }
+
+        function handleLogout() {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        async function handleSearchSlots() {
+            const condoId = document.getElementById('condoSelect').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (!startTime || !endTime) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            try {
+                const token = sessionStorage.getItem('authToken');
+                const data = await callFunction(`listSlots?condoId=${condoId}&startTime=${startTime}&endTime=${endTime}`, 'GET', null, token);
+                renderSlots(data.slots);
+            } catch (error) {
+                console.error('Error searching slots:', error);
+                alert('Error searching slots.');
+            }
+        }
+
+        function renderSlots(slots) {
+            const slotsSection = document.getElementById('slotsSection');
+            const slotsList = document.getElementById('slotsList');
+
+            if (!slots || slots.length === 0) {
+                slotsList.innerHTML = '<p>No available slots for the selected time range.</p>';
+                slotsSection.classList.remove('hidden');
+                return;
+            }
+
+            slotsList.innerHTML = slots.map(slot => `
+                <div class="slot-card">
+                    <h3>${slot.condoName}</h3>
+                    <p><strong>Location:</strong> ${slot.tower} / ${slot.floor} / ${slot.slotNumber}</p>
+                    <p><strong>Available:</strong></p>
+                    <p style="font-size: 0.9rem; color: #666;">
+                        From ${formatDateWithTime(slot.availableFrom)}<br>
+                        Until ${formatDateWithTime(slot.availableTo)}
+                    </p>
+                    <p><strong>Cutoff:</strong> ${slot.cutoffLabel}</p>
+                    <p class="rate">₱${slot.ratePHP} (${slot.rateType})</p>
+                    <button class="btn-select" onclick="selectSlot('${slot.slotId}', '${slot.condoId}')">Select This Slot</button>
+                </div>
+            `).join('');
+
+            slotsSection.classList.remove('hidden');
+        }
+
+        function selectSlot(slotId, condoId) {
+            sessionStorage.setItem('selectedSlotId', slotId);
+            sessionStorage.setItem('selectedCondoId', condoId);
+            document.getElementById('bookingSection').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

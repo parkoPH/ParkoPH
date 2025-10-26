@@ -1,0 +1,243 @@
+<!-- owner.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Dashboard - Manila Condo Parking</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container container-owner">
+        <nav class="user-nav">
+            <div class="user-nav-info">
+                <span id="userGreeting" class="user-greeting">Loading...</span>
+            </div>
+            <button id="logoutBtn" class="btn-logout">Logout</button>
+        </nav>
+
+        <header class="hero-header">
+            <h1 class="hero-title">Earn from your parking slot</h1>
+            <p class="hero-subtitle">List your space. Approve guests. Get paid.</p>
+        </header>
+
+        <main>
+            <!-- Section: Add/Edit Slot -->
+            <section id="addSlotSection" class="card">
+                <h2 class="section-title">Add a Parking Slot</h2>
+                
+                <div class="form-section">
+                    <h3 class="form-section-label">Location</h3>
+                    
+                    <div class="form-group">
+                        <label for="ownerCondo">Condo Name</label>
+                        <select id="ownerCondo">
+                            <option value="prisma_residences" data-condo-name="Prisma Residences">Prisma Residences</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ownerTower">Tower</label>
+                        <input type="text" id="ownerTower" placeholder="e.g. Tower B" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ownerFloor">Floor</label>
+                        <input type="text" id="ownerFloor" placeholder="e.g. B2" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ownerSlotNumber">Slot Number</label>
+                        <input type="text" id="ownerSlotNumber" placeholder="e.g. P37" required>
+                    </div>
+                </div>
+
+                <div class="form-divider"></div>
+
+                <div class="form-section">
+                    <h3 class="form-section-label">Availability</h3>
+                    
+                    <div class="form-group">
+                        <label for="ownerAvailFrom">Available From</label>
+                        <input type="datetime-local" id="ownerAvailFrom" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ownerAvailTo">Available Until</label>
+                        <input type="datetime-local" id="ownerAvailTo" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ownerCutoffLabel">Cutoff Label (Human Readable)</label>
+                        <input type="text" id="ownerCutoffLabel" placeholder="e.g. Good until Oct 27, 12:00 MN (midnight)" required>
+                    </div>
+                </div>
+
+                <div class="form-divider"></div>
+
+                <div class="form-section">
+                    <h3 class="form-section-label">Pricing</h3>
+                    
+                    <div class="form-group">
+                        <label for="ownerRateType">Rate Type</label>
+                        <select id="ownerRateType">
+                            <option value="overnight_flat">Overnight Flat Rate</option>
+                            <option value="per_hour">Per Hour</option>
+                            <option value="block_flat">Block Flat Rate</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ownerRatePHP">Rate (₱)</label>
+                        <input type="number" id="ownerRatePHP" placeholder="e.g. 300" required min="0">
+                    </div>
+                </div>
+
+                <div class="form-divider"></div>
+
+                <div class="form-section">
+                    <h3 class="form-section-label">Contact</h3>
+                    
+                    <div class="form-group">
+                        <label for="ownerContact">Your Phone Number</label>
+                        <input type="tel" id="ownerContact" placeholder="e.g. 0917-000-0000" required>
+                    </div>
+                </div>
+
+                <button id="addSlotButton" class="btn-primary">Add Slot</button>
+            </section>
+
+            <!-- Section: Pending Booking Requests -->
+            <section id="pendingBookingsSection" class="card">
+                <h2 class="section-title">Pending Booking Requests</h2>
+                <div id="pendingBookingsList">
+                    <p class="loading-text">Loading bookings...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthAndRole('owner');
+            initializeOwnerPage();
+        });
+
+        function initializeOwnerPage() {
+            const userName = sessionStorage.getItem('userName');
+            document.getElementById('userGreeting').textContent = `Logged in as ${userName} (Owner)`;
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('addSlotButton').addEventListener('click', handleAddSlot);
+            loadPendingBookings();
+        }
+
+        function handleLogout() {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        async function loadPendingBookings() {
+            try {
+                const token = sessionStorage.getItem('authToken');
+                const response = await fetch('/.netlify/functions/listBookings', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                const bookings = data.bookings || [];
+                const pending = bookings.filter(b => b.status === 'pending');
+
+                const listEl = document.getElementById('pendingBookingsList');
+                if (pending.length === 0) {
+                    listEl.innerHTML = '<p class="empty-text">No pending bookings at this time.</p>';
+                    return;
+                }
+
+                listEl.innerHTML = pending.map(booking => `
+                    <div class="booking-request-card">
+                        <div class="booking-request-info">
+                            <div class="booking-request-row">
+                                <span class="booking-request-label">Parker</span>
+                                <span class="booking-request-value booking-request-name">${booking.parkerName}</span>
+                            </div>
+                            <div class="booking-request-row">
+                                <span class="booking-request-label">Plate</span>
+                                <span class="booking-request-value booking-request-plate">${booking.plateNumber}</span>
+                            </div>
+                            <div class="booking-request-row">
+                                <span class="booking-request-label">Slot</span>
+                                <span class="booking-request-value">${booking.slotId}</span>
+                            </div>
+                            <div class="booking-request-row">
+                                <span class="booking-request-label">Time Window</span>
+                                <span class="booking-request-value">${new Date(booking.startTime).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} → ${new Date(booking.endTime).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                            </div>
+                        </div>
+                        <button class="btn-primary" onclick="approveBookingHandler('${booking.bookingId}')">Approve</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading pending bookings:', error);
+                document.getElementById('pendingBookingsList').innerHTML = '<p class="error-text">Error loading bookings.</p>';
+            }
+        }
+
+        async function approveBookingHandler(bookingId) {
+            try {
+                const token = sessionStorage.getItem('authToken');
+                const response = await fetch('/.netlify/functions/approveBooking', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ bookingId })
+                });
+                const data = await response.json();
+                alert(`Booking ${bookingId} approved! QR Code: ${data.booking.qrCodeData}`);
+                loadPendingBookings();
+            } catch (error) {
+                console.error('Error approving booking:', error);
+                alert('Error approving booking.');
+            }
+        }
+
+        async function handleAddSlot() {
+            const condoSelect = document.getElementById('ownerCondo');
+            const condoId = condoSelect.value;
+            const condoName = condoSelect.options[condoSelect.selectedIndex].dataset.condoName;
+
+            const payload = {
+                condoId,
+                condoName,
+                tower: document.getElementById('ownerTower').value,
+                floor: document.getElementById('ownerFloor').value,
+                slotNumber: document.getElementById('ownerSlotNumber').value,
+                availableFrom: document.getElementById('ownerAvailFrom').value,
+                availableTo: document.getElementById('ownerAvailTo').value,
+                rateType: document.getElementById('ownerRateType').value,
+                ratePHP: parseFloat(document.getElementById('ownerRatePHP').value),
+                cutoffLabel: document.getElementById('ownerCutoffLabel').value,
+                ownerContact: document.getElementById('ownerContact').value
+            };
+
+            try {
+                const token = sessionStorage.getItem('authToken');
+                const response = await fetch('/.netlify/functions/addSlot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                alert(`Slot ${data.slot.slotNumber} added successfully!`);
+            } catch (error) {
+                console.error('Error adding slot:', error);
+                alert('Error adding slot.');
+            }
+        }
+    </script>
+</body>
+</html>

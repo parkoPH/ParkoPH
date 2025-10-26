@@ -1,0 +1,120 @@
+<!-- signup.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Manila Condo Parking</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container container-auth">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-title">Create Account</h1>
+                <p class="auth-subtitle">Join the parking marketplace</p>
+            </div>
+
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" placeholder="Your name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupEmail">Email Address</label>
+                    <input type="email" id="signupEmail" placeholder="you@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" placeholder="••••••••" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupRole">I am a...</label>
+                    <select id="signupRole" required>
+                        <option value="">Select your role</option>
+                        <option value="parker">Parker (Driver)</option>
+                        <option value="owner">Owner (Slot Owner)</option>
+                        <option value="guard">Guard (Security)</option>
+                    </select>
+                </div>
+
+                <div id="condoSelectContainer" class="form-group hidden">
+                    <label for="signupCondo">Condo (Your Location)</label>
+                    <select id="signupCondo">
+                        <option value="prisma_residences">Prisma Residences</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary">Sign Up</button>
+            </form>
+
+            <div class="auth-divider"></div>
+
+            <p class="auth-cta">Already have an account? <a href="login.html" class="auth-link">Log in here</a></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('signupRole').addEventListener('change', (e) => {
+            const condoContainer = document.getElementById('condoSelectContainer');
+            if (e.target.value === 'owner' || e.target.value === 'guard') {
+                condoContainer.classList.remove('hidden');
+            } else {
+                condoContainer.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', handleSignup);
+
+        async function handleSignup(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const role = document.getElementById('signupRole').value;
+            const condo = document.getElementById('signupCondo').value || null;
+
+            if (!name || !email || !password || !role) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            if ((role === 'owner' || role === 'guard') && !condo) {
+                alert('Please select a condo.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/.netlify/functions/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        password,
+                        role,
+                        condoId: condo
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.error || 'Signup failed.');
+                    return;
+                }
+
+                alert('Account created successfully! Redirecting to login...');
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Signup error:', error);
+                alert('An error occurred. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>
